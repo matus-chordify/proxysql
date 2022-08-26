@@ -7160,6 +7160,15 @@ void MySQL_Session::RequestEnd(MySQL_Data_Stream *myds) {
 		if (myds->myconn) {
 			myds->myconn->async_free_result();
 			myds->myconn->compute_unknown_transaction_status();
+
+			// check if a transaction needs to be ended
+			if (active_transactions != 0) { // we currently think we're in a transaction
+				if ((myds->myconn->mysql->server_status & SERVER_STATUS_IN_TRANS) == 0) { // but there is no transaction on the backend connection
+					active_transactions=NumActiveTransactions(); // refresh the transaction counter by checking all the hostgroups/backends
+					if (active_transactions == 0)
+						transaction_started_at = 0; // reset the transaction start timestamp, too
+				}
+			}
 		}
 		myds->free_mysql_real_query();
 	}
